@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sudoku Master</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style id="app-style">
+    :root {
+      --primary-bg: #121212;
+      --secondary-bg: #1e1e1e;
+      --accent-color: #8b5cf6;
+      --accent-color-hover: #7c3aed;
+      --text-primary: #f3f4f6;
+      --text-secondary: #9ca3af;
+      --cell-empty: #2a2a2a;
+      --cell-filled: #3a3a3a;
+      --cell-highlight: rgba(139, 92, 246, 0.2);
+      --cell-error: rgba(239, 68, 68, 0.3);
+      --cell-success: rgba(34, 197, 94, 0.2);
+      --border-color: #333333;
+    }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: var(--primary-bg);
+      color: var(--text-primary);
+      min-height: 100vh;
+    }
+
+    .page {
+      display: none;
+      min-height: 100vh;
+    }
+
+    .active-page {
+      display: flex;
+    }
+
+    .form-input {
+      background-color: var(--secondary-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      border-radius: 0.375rem;
+      padding: 0.75rem 1rem;
+      width: 100%;
+      transition: all 0.3s ease;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.25);
+    }
+
+    .btn {
+      border-radius: 0.375rem;
+      padding: 0.75rem 1rem;
+      font-weight: 500;
+      transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+      background-color: var(--accent-color);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background-color: var(--accent-color-hover);
+    }
+
+    .btn-outline {
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+    }
+
+    .btn-outline:hover {
+      background-color: var(--secondary-bg);
+    }
+
+    .sudoku-grid {
+      display: grid;
+      grid-template-columns: repeat(9, 1fr);
+      gap: 1px;
+      border: 2px solid var(--border-color);
+      max-width: 500px;
+      width: 100%;
+      aspect-ratio: 1/1;
+      margin: 0 auto;
+    }
+
+    .sudoku-cell {
+      background-color: var(--cell-empty);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      user-select: none;
+    }
+
+    .sudoku-cell:nth-child(3n):not(:nth-child(9n)) {
+      border-right: 2px solid var(--border-color);
+    }
+
+    .sudoku-cell:nth-child(n+19):nth-child(-n+27),
+    .sudoku-cell:nth-child(n+46):nth-child(-n+54) {
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    .sudoku-cell.filled {
+      background-color: var(--cell-filled);
+    }
+
+    .sudoku-cell.selected {
+      background-color: var(--cell-highlight);
+    }
+
+    .sudoku-cell.error {
+      background-color: var(--cell-error);
+    }
+
+    .sudoku-cell.success {
+      background-color: var(--cell-success);
+    }
+
+    .sudoku-controls {
+      max-width: 500px;
+      margin: 1.5rem auto;
+    }
+
+    .number-pad {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 0.5rem;
+      margin-top: 1.5rem;
+    }
+
+    .number-pad button {
+      background-color: var(--secondary-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      border-radius: 0.375rem;
+      font-size: 1.25rem;
+      font-weight: 600;
+      padding: 0.75rem;
+      transition: all 0.2s ease;
+    }
+
+    .number-pad button:hover {
+      background-color: var(--accent-color);
+      color: white;
+    }
+
+    .difficulty-select {
+      background-color: var(--secondary-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      border-radius: 0.375rem;
+      padding: 0.75rem 1rem;
+      width: 100%;
+    }
+
+    .spinner {
+      border: 4px solid rgba(255, 255, 255, 0.1);
+      border-left-color: var(--accent-color);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .history-item {
+      background-color: var(--secondary-bg);
+      border-radius: 0.5rem;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .history-date {
+      color: var(--accent-color);
+      font-weight: 600;
+    }
+
+    .navbar {
+      background-color: var(--secondary-bg);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .tab-button {
+      padding: 1rem;
+      color: var(--text-secondary);
+      transition: all 0.3s ease;
+      border-bottom: 2px solid transparent;
+    }
+
+    .tab-button.active {
+      color: var(--accent-color);
+      border-bottom: 2px solid var(--accent-color);
+    }
+
+    @media (max-width: 640px) {
+      .sudoku-grid {
+        max-width: 100%;
+      }
+      
+      .sudoku-cell {
+        font-size: 1rem;
+      }
+      
+      .number-pad button {
+        font-size: 1rem;
+        padding: 0.5rem;
+      }
+    }
+  </style>
+</head>
+<body class="bg-gray-900">
+  <!-- Login Page -->
+  <div id="login-page" class="page active-page flex flex-col justify-center items-center min-h-screen p-4">
+    <div class="w-full max-w-md bg-gray-800 p-8 rounded-lg shadow-lg">
+      <div class="text-center mb-8">
+        <h1 class="text-4xl font-bold text-purple-500 mb-2">Sudoku Master</h1>
+        <p class="text-gray-400">Challenge your mind with puzzles</p>
+      </div>
+      
+      <form id="login-form" class="space-y-6">
+        <div>
+          <label for="email" class="block text-sm font-medium text-gray-300 mb-1">Email</label>
+          <input type="email" id="email" class="form-input" placeholder="your@email.com" required>
+        </div>
+        
+        <div>
+          <label for="password" class="block text-sm font-medium text-gray-300 mb-1">Password</label>
+          <input type="password" id="password" class="form-input" placeholder="••••••••" required>
+        </div>
+        
+        <button type="submit" class="btn btn-primary w-full">
+          <i class="fas fa-sign-in-alt mr-2"></i> Sign In
+        </button>
+      </form>
+      
+      <div class="mt-6 text-center text-sm text-gray-400">
+        <p>Don't have an account? <a href="javascript:void(0)" class="text-purple-500 hover:text-purple-400">Sign up</a></p>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Main App Container (includes navbar and page content) -->
+  <div id="app-container" class="hidden flex flex-col min-h-screen">
+    <!-- Navbar -->
+    <nav class="navbar p-4">
+      <div class="container mx-auto flex items-center justify-between">
+        <div class="flex items-center">
+          <h1 class="text-2xl font-bold text-purple-500">Sudoku Master</h1>
+        </div>
+        
+        <div class="hidden md:flex space-x-4">
+          <button class="tab-button active" data-page="game">Game</button>
+          <button class="tab-button" data-page="history">History</button>
+        </div>
+        
+        <div class="flex items-center">
+          <span id="user-display" class="mr-4 hidden md:block text-gray-300"></span>
+          <button id="logout-button" class="btn btn-outline">
+            <i class="fas fa-sign-out-alt mr-2"></i>
+            <span class="hidden md:inline">Logout</span>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Mobile Navigation -->
+      <div class="md:hidden flex justify-around mt-2">
+        <button class="tab-button active flex-1" data-page="game">
+          <i class="fas fa-gamepad mr-1"></i> Game
+        </button>
+        <button class="tab-button flex-1" data-page="history">
+          <i class="fas fa-history mr-1"></i> History
+        </button>
+      </div>
+    </nav>
+    
+    <!-- Game Page -->
+    <div id="game-page" class="page active-page container mx-auto p-4 flex-1">
+      <div class="flex flex-col">
+        <!-- Difficulty and Controls -->
+        <div class="sudoku-controls mb-6">
+          <div class="flex flex-wrap gap-4 mb-4">
+            <div class="w-full md:w-1/3">
+              <label for="difficulty" class="block text-sm font-medium text-gray-300 mb-1">Difficulty</label>
+              <select id="difficulty" class="difficulty-select">
+                <option value="easy">Easy</option>
+                <option value="medium">Medium</option>
+                <option value="hard">Hard</option>
+                <option value="expert">Expert</option>
+              </select>
+            </div>
+            
+            <div class="w-full md:w-auto flex-1">
+              <label class="block text-sm font-medium text-gray-300 mb-1">Game Controls</label>
+              <div class="flex space-x-2">
+                <button id="new-game-btn" class="btn btn-primary flex-1">
+                  <i class="fas fa-plus mr-1"></i> New Puzzle
+                </button>
+                <button id="check-btn" class="btn btn-outline flex-1">
+                  <i class="fas fa-check mr-1"></i> Check
+                </button>
+                <button id="solve-btn" class="btn btn-outline flex-1">
+                  <i class="fas fa-magic mr-1"></i> Auto-Solve
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Sudoku Grid -->
+        <div class="sudoku-grid" id="sudoku-grid">
+          <!-- Grid will be generated by JS -->
+        </div>
+        
+        <!-- Number Pad -->
+        <div class="number-pad">
+          <button data-number="1">1</button>
+          <button data-number="2">2</button>
+          <button data-number="3">3</button>
+          <button data-number="4">4</button>
+          <button data-number="5">5</button>
+          <button data-number="6">6</button>
+          <button data-number="7">7</button>
+          <button data-number="8">8</button>
+          <button data-number="9">9</button>
+          <button data-number="0">Clear</button>
+        </div>
+      </div>
+      
+      <!-- Loading Overlay -->
+      <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 hidden">
+        <div class="bg-gray-800 p-6 rounded-lg flex flex-col items-center">
+          <div class="spinner mb-4"></div>
+          <p class="text-lg font-medium text-gray-300">Solving puzzle...</p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- History Page -->
+    <div id="history-page" class="page container mx-auto p-4 flex-1">
+      <h2 class="text-2xl font-bold mb-6">Your Sudoku History</h2>
+      
+      <!-- Summary Section -->
+      <div class="bg-gray-800 rounded-lg p-4 mb-6">
+        <h3 class="text-xl font-semibold mb-4">Total Puzzles Solved</h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div class="bg-gray-700 p-3 rounded-md">
+            <p class="text-gray-400 text-sm">Easy</p>
+            <p id="easy-count" class="text-2xl font-bold text-green-400">0</p>
+          </div>
+          <div class="bg-gray-700 p-3 rounded-md">
+            <p class="text-gray-400 text-sm">Medium</p>
+            <p id="medium-count" class="text-2xl font-bold text-yellow-400">0</p>
+          </div>
+          <div class="bg-gray-700 p-3 rounded-md">
+            <p class="text-gray-400 text-sm">Hard</p>
+            <p id="hard-count" class="text-2xl font-bold text-orange-400">0</p>
+          </div>
+          <div class="bg-gray-700 p-3 rounded-md">
+            <p class="text-gray-400 text-sm">Expert</p>
+            <p id="expert-count" class="text-2xl font-bold text-red-400">0</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- History List -->
+      <div id="history-list" class="space-y-4">
+        <!-- Will be populated by JS -->
+        <div class="text-gray-400 text-center py-8">
+          Your solved puzzles will appear here
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script id="app-script">
+    // App state
+    const state = {
+      currentPage: 'login',
+      user: null,
+      selectedCell: null,
+      sudoku: {
+        grid: Array(9).fill().map(() => Array(9).fill(0)),
+        solution: Array(9).fill().map(() => Array(9).fill(0)),
+        original: Array(9).fill().map(() => Array(9).fill(false))
+      },
+      history: []
+    };
+
+    // DOM Elements
+    const elements = {
+      pages: {
+        login: document.getElementById('login-page'),
+        appContainer: document.getElementById('app-container'),
+        game: document.getElementById('game-page'),
+        history: document.getElementById('history-page')
+      },
+      loginForm: document.getElementById('login-form'),
+      userDisplay: document.getElementById('user-display'),
+      logoutButton: document.getElementById('logout-button'),
+      sudokuGrid: document.getElementById('sudoku-grid'),
+      difficultySelect: document.getElementById('difficulty'),
+      newGameBtn: document.getElementById('new-game-btn'),
+      checkBtn: document.getElementById('check-btn'),
+      solveBtn: document.getElementById('solve-btn'),
+      loadingOverlay: document.getElementById('loading-overlay'),
+      numberPad: document.querySelectorAll('.number-pad button'),
+      tabButtons: document.querySelectorAll('.tab-button'),
+      historyCounts: {
+        easy: document.getElementById('easy-count'),
+        medium: document.getElementById('medium-count'),
+        hard: document.getElementById('hard-count'),
+        expert: document.getElementById('expert-count')
+      },
+      historyList: document.getElementById('history-list')
+    };
+
+    // Initialize the app
+    function initApp() {
+      // Check if user is logged in
+      const userSession = localStorage.getItem('userSession');
+      
+      if (userSession) {
+        state.user = JSON.parse(userSession);
+        showUserInfo();
+        loadHistory();
+        navigateTo('game');
+      }
+      
+      // Setup event listeners
+      setupEventListeners();
+      
+      // Initialize Sudoku grid
+      initSudokuGrid();
+    }
+
+    // Setup event listeners
+    function setupEventListeners() {
+      // Login form submission
+      elements.loginForm.addEventListener('submit', handleLogin);
+      
+      // Logout button
+      elements.logoutButton.addEventListener('click', handleLogout);
+      
+      // Tab navigation
+      elements.tabButtons.forEach(tab => {
+        tab.addEventListener('click', () => {
+          const pageName = tab.getAttribute('data-page');
+          navigateTo(pageName);
+        });
+      });
+      
+      // Game controls
+      elements.newGameBtn.addEventListener('click', handleNewGame);
+      elements.checkBtn.addEventListener('click', handleCheckGame);
+      elements.solveBtn.addEventListener('click', handleSolveGame);
+      
+      // Number pad
+      elements.numberPad.forEach(button => {
+        button.addEventListener('click', () => {
+          if (state.selectedCell) {
+            const number = button.getAttribute('data-number');
+            fillCell(state.selectedCell, number === '0' ? '' : number);
+          }
+        });
+      });
+    }
+
+    // Handle login form submission
+    function handleLogin(e) {
+      e.preventDefault();
+      
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      
+      // For prototype: simulate login
+      const user = {
+        email,
+        name: email.split('@')[0]
+      };
+      
+      // Store in localStorage
+      localStorage.setItem('userSession', JSON.stringify(user));
+      state.user = user;
+      
+      // Show user info
+      showUserInfo();
+      
+      // Create empty history if none exists
+      if (!localStorage.getItem('solveHistory')) {
+        localStorage.setItem('solveHistory', JSON.stringify([]));
+      }
+      
+      // Load history
+      loadHistory();
+      
+      // Navigate to game page
+      navigateTo('game');
+      
+      // Start a new game
+      handleNewGame();
+    }
+
+    // Handle logout
+    function handleLogout() {
+      localStorage.removeItem('userSession');
+      navigateTo('login');
+    }
+
+    // Show user info
+    function showUserInfo() {
+      if (state.user) {
+        elements.userDisplay.textContent = state.user.name;
+        elements.userDisplay.classList.remove('hidden');
+      }
+    }
+
+    // Load history
+    function loadHistory() {
+      const history = JSON.parse(localStorage.getItem('solveHistory')) || [];
+      state.history = history;
+      updateHistoryView();
+    }
+
+    // Update history view
+    function updateHistoryView() {
+      // Update counts
+      const counts = {
+        easy: 0,
+        medium: 0,
+        hard: 0,
+        expert: 0
+      };
+      
+      state.history.forEach(entry => {
+        counts[entry.difficulty] = (counts[entry.difficulty] || 0) + 1;
+      });
+      
+      elements.historyCounts.easy.textContent = counts.easy;
+      elements.historyCounts.medium.textContent = counts.medium;
+      elements.historyCounts.hard.textContent = counts.hard;
+      elements.historyCounts.expert.textContent = counts.expert;
+      
+      // Group by date
+      const groupedHistory = {};
+      state.history.forEach(entry => {
+        const date = new Date(entry.timestamp).toLocaleDateString();
+        if (!groupedHistory[date]) {
+          groupedHistory[date] = [];
+        }
+        groupedHistory[date].push(entry);
+      });
+      
+      // Render history list
+      const historyListHTML = Object.keys(groupedHistory).length > 0 
+        ? Object.entries(groupedHistory).map(([date, entries]) => {
+            return `
+              <div class="history-item">
+                <h3 class="history-date mb-2">${date}</h3>
+                <div class="space-y-2">
+                  ${entries.map(entry => {
+                    const time = new Date(entry.timestamp).toLocaleTimeString();
+                    let difficultyClass = 'text-green-400';
+                    if (entry.difficulty === 'medium') difficultyClass = 'text-yellow-400';
+                    if (entry.difficulty === 'hard') difficultyClass = 'text-orange-400';
+                    if (entry.difficulty === 'expert') difficultyClass = 'text-red-400';
+                    
+                    return `
+                      <div class="flex justify-between items-center">
+                        <span class="${difficultyClass} font-medium capitalize">${entry.difficulty}</span>
+                        <span class="text-gray-400 text-sm">${time}</span>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+            `;
+          }).join('')
+        : `<div class="text-gray-400 text-center py-8">Your solved puzzles will appear here</div>`;
+      
+      elements.historyList.innerHTML = historyListHTML;
+    }
+
+    // Initialize Sudoku grid
+    function initSudokuGrid() {
+      elements.sudokuGrid.innerHTML = '';
+      
+      for (let row = 0; row < 9; row++) {
+        for (let col = 0; col < 9; col++) {
+          const cell = document.createElement('div');
+          cell.className = 'sudoku-cell';
+          cell.setAttribute('data-row', row);
+          cell.setAttribute('data-col', col);
+          
+          cell.addEventListener('click', () => {
+            // Select cell
+            if (state.selectedCell) {
+              state.selectedCell.classList.remove('selected');
+            }
+            cell.classList.add('selected');
+            state.selectedCell = cell;
+          });
+          
+          elements.sudokuGrid.appendChild(cell);
+        }
+      }
+    }
+
+    // Fill a cell with a number
+    function fillCell(cell, value) {
+      const row = parseInt(cell.getAttribute('data-row'));
+      const col = parseInt(cell.getAttribute('data-col'));
+      
+      // Don't allow editing original cells
+      if (state.sudoku.original[row][col]) return;
+      
+      // Update grid
+      state.sudoku.grid[row][col] = value ? parseInt(value) : 0;
+      
+      // Update UI
+      cell.textContent = value;
+      
+      // Add/remove filled class
+      if (value) {
+        cell.classList.add('filled');
+      } else {
+        cell.classList.remove('filled');
+      }
+      
+      // Remove any error/success classes
+      cell.classList.remove('error', 'success');
+    }
+
+    // Navigate to a page
+    function navigateTo(pageName) {
+      // Don't navigate to same page
+      if (state.currentPage === pageName) return;
+      
+      // Hide all pages and tabs
+      document.querySelectorAll('.page').forEach(page => {
+        page.classList.remove('active-page');
+      });
+      
+      elements.tabButtons.forEach(tab => {
+        tab.classList.remove('active');
+      });
+      
+      // Show correct page
+      if (pageName === 'login') {
+        elements.pages.login.classList.add('active-page');
+        elements.pages.appContainer.classList.add('hidden');
+      } else {
+        elements.pages.login.classList.remove('active-page');
+        elements.pages.appContainer.classList.remove('hidden');
+        elements.pages[pageName].classList.add('active-page');
+        
+        // Activate correct tab
+        document.querySelectorAll(`.tab-button[data-page="${pageName}"]`).forEach(tab => {
+          tab.classList.add('active');
+        });
+      }
+      
+      state.currentPage = pageName;
+    }
+
+    // Handle new game
+    function handleNewGame() {
+      const difficulty = elements.difficultySelect.value;
+      
+      // Show loading overlay
+      elements.loadingOverlay.classList.remove('hidden');
+      
+      // Simulate API call to get new puzzle
+      setTimeout(() => {
+        // Generate a simple puzzle for the prototype
+        generatePrototypePuzzle(difficulty);
+        elements.loadingOverlay.classList.add('hidden');
+      }, 1000);
+    }
+
+    // Generate a prototype puzzle
+    function generatePrototypePuzzle(difficulty) {
+      // Reset the grid
+      state.sudoku.grid = Array(9).fill().map(() => Array(9).fill(0));
+      state.sudoku.original = Array(9).fill().map(() => Array(9).fill(false));
+      
+      // Different number of hints based on difficulty
+      let hints;
+      switch(difficulty) {
+        case 'easy': hints = 35; break;
+        case 'medium': hints = 30; break;
+        case 'hard': hints = 25; break;
+        case 'expert': hints = 20; break;
+        default: hints = 35;
+      }
+      
+      // Place hints randomly for the prototype
+      for (let i = 0; i < hints; i++) {
+        const row = Math.floor(Math.random() * 9);
+        const col = Math.floor(Math.random() * 9);
+        const value = Math.floor(Math.random() * 9) + 1;
+        
+        state.sudoku.grid[row][col] = value;
+        state.sudoku.original[row][col] = true;
+      }
+      
+      // Also create a "solution" for auto-solve feature
+      state.sudoku.solution = JSON.parse(JSON.stringify(state.sudoku.grid));
+      
+      // Fill empty cells in the solution with random valid numbers
+      for (let row = 0; row < 9; row++) {
+        for (let col = 0; col < 9; col++) {
+          if (state.sudoku.solution[row][col] === 0) {
+            state.sudoku.solution[row][col] = Math.floor(Math.random() * 9) + 1;
+          }
+        }
+      }
+      
+      // Update UI
+      updateSudokuGridUI();
+    }
+
+    // Update Sudoku grid UI
+    function updateSudokuGridUI() {
+      const cells = elements.sudokuGrid.querySelectorAll('.sudoku-cell');
+      
+      cells.forEach(cell => {
+        const row = parseInt(cell.getAttribute('data-row'));
+        const col = parseInt(cell.getAttribute('data-col'));
+        const value = state.sudoku.grid[row][col];
+        
+        cell.textContent = value > 0 ? value : '';
+        cell.classList.remove('filled', 'selected', 'error', 'success');
+        
+        if (value > 0) {
+          cell.classList.add('filled');
+        }
+        
+        if (state.sudoku.original[row][col]) {
+          cell.style.fontWeight = 'bold';
+          cell.style.color = 'rgb(209, 213, 219)';
+        } else {
+          cell.style.fontWeight = 'normal';
+          cell.style.color = '';
+        }
+      });
+      
+      // Clear selected cell
+      state.selectedCell = null;
+    }
+
+    // Handle check game
+    function handleCheckGame() {
+      // Count empty cells
+      let emptyCount = 0;
+      
+      // Find errors
+      let errors = false;
+      
+      // Check each cell
+      const cells = elements.sudokuGrid.querySelectorAll('.sudoku-cell');
+      cells.forEach(cell => {
+        const row = parseInt(cell.getAttribute('data-row'));
+        const col = parseInt(cell.getAttribute('data-col'));
+        const value = state.sudoku.grid[row][col];
+        
+        // Check if cell is empty
+        if (value === 0) {
+          emptyCount++;
+          return;
+        }
+        
+        // Reset classes
+        cell.classList.remove('error', 'success');
+        
+        // For the prototype, we'll just show random valid/invalid cells
+        if (!state.sudoku.original[row][col] && Math.random() < 0.2) {
+          cell.classList.add('error');
+          errors = true;
+        } else {
+          cell.classList.add('success');
+        }
+      });
+      
+      // Check if puzzle is complete
+      if (emptyCount === 0 && !errors) {
+        handlePuzzleComplete();
+      } else if (emptyCount > 0) {
+        Swal.fire({
+          title: 'Puzzle Incomplete',
+          text: `You still have ${emptyCount} empty cells.`,
+          icon: 'info',
+          confirmButtonColor: '#8b5cf6'
+        });
+      } else if (errors) {
+        Swal.fire({
+          title: 'Check Failed',
+          text: 'There are some errors in your solution.',
+          icon: 'error',
+          confirmButtonColor: '#8b5cf6'
+        });
+      }
+    }
+
+    // Handle solve game
+    function handleSolveGame() {
+      // Show loading overlay
+      elements.loadingOverlay.classList.remove('hidden');
+      
+      // Simulate solving the puzzle
+      setTimeout(() => {
+        // Fill grid with solution
+        state.sudoku.grid = JSON.parse(JSON.stringify(state.sudoku.solution));
+        updateSudokuGridUI();
+        
+        // Hide loading overlay
+        elements.loadingOverlay.classList.add('hidden');
+        
+        // Mark as complete
+        handlePuzzleComplete();
+      }, 2000);
+    }
+
+    // Handle puzzle complete
+    function handlePuzzleComplete() {
+      const difficulty = elements.difficultySelect.value;
+      
+      // Add to history
+      const historyEntry = {
+        difficulty,
+        timestamp: new Date().toISOString()
+      };
+      
+      // Update local storage
+      const history = JSON.parse(localStorage.getItem('solveHistory')) || [];
+      history.push(historyEntry);
+      localStorage.setItem('solveHistory', JSON.stringify(history));
+      
+      // Update state
+      state.history = history;
+      
+      // Update history view
+      updateHistoryView();
+      
+      // Show success message
+      Swal.fire({
+        title: 'Puzzle Complete!',
+        text: `Congratulations! You've solved the ${difficulty} puzzle.`,
+        icon: 'success',
+        confirmButtonColor: '#8b5cf6'
+      });
+    }
+
+    // Initialize the app
+    initApp();
+  </script>
+</body>
+</html>
